@@ -57,5 +57,5 @@ def extract_text():
         return {'filename': file_name, 'extractedText': extracted_text}
 
     except Exception as e:
-        app.log.error(f"Error extracting text from PDF: {str(e)}")
-        return Response(body={'message': f'Error extracting text from PDF: {str(e)}'}, status_code=500)
+        app.log.error(f"Error extracting text from the file: {str(e)}")
+        return Response(body={'message': f'Error extracting text from the file: {str(e)}'}, status_code=500)
