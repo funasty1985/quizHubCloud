@@ -26,7 +26,7 @@ def extract_key_phrases():
     return {'keyPhrases': key_phrases}
 
 @app.route('/upload', methods=['POST'], cors=True)
-def upload_pdf():
+def upload():
     try:
         request_data = json.loads(app.current_request.raw_body)
         file_name = request_data['filename']
