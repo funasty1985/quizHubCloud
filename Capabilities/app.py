@@ -1,32 +1,18 @@
-from chalice import Chalice
-from chalicelib import comprehend_service
+from chalice import Chalice, Response
+import json
+import base64
 from chalicelib.storage_service import StorageService
 from chalicelib.textract_service import TextractService
 
 app = Chalice(app_name='Capabilities')
+app.debug = True
 
-comprehend_service = comprehend_service.ComprehendService()
 storage_service = StorageService('contentcen301236221.aws.ai')
 textract_service = TextractService()
 
-@app.route('/', cors=True)
-def index():
-    return {'hello': 'world'}
-
-@app.route('/extract-key-phrases', methods=['POST'], cors=True)
-def extract_key_phrases():
-    request = app.current_request
-    body = request.json_body
-
-    text = body.get('text', '')
-    if not text:
-        return {'error': 'No text provided'}
-
-    key_phrases = comprehend_service.extract_key_phrases(text)
-    return {'keyPhrases': key_phrases}
 
 @app.route('/upload', methods=['POST'], cors=True)
-def upload():
+def upload_pdf():
     try:
         request_data = json.loads(app.current_request.raw_body)
         file_name = request_data['filename']
@@ -57,8 +43,9 @@ def extract_text():
         return {'filename': file_name, 'extractedText': extracted_text}
 
     except Exception as e:
-        app.log.error(f"Error extracting text from the file: {str(e)}")
-        return Response(body={'message': f'Error extracting text from the file: {str(e)}'}, status_code=500)
+        app.log.error(f"Error extracting text from PDF: {str(e)}")
+        return Response(body={'message': f'Error extracting text from PDF: {str(e)}'}, status_code=500)
+
 
 @app.route('/extract-paragraph', methods=['POST'], cors=True)
 def extract_paragraph():
