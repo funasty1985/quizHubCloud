@@ -3,6 +3,7 @@ import json
 import base64
 from chalicelib.storage_service import StorageService
 from chalicelib.textract_service import TextractService
+import time
 
 app = Chalice(app_name='Capabilities')
 app.debug = True
@@ -31,6 +32,7 @@ def upload_pdf():
 @app.route('/extract-text', methods=['POST'], cors=True)
 def extract_text():
     try:
+        start_time = time.time()
         request_data = json.loads(app.current_request.raw_body)
         file_name = request_data['filename']
 
@@ -38,6 +40,8 @@ def extract_text():
         extracted_text = textract_service.extract_text(storage_service.get_storage_location(), file_name)
 
         app.log.debug("Text extraction completed.")
+        duration = time.time() - start_time 
+        app.log.debug(f"Text extraction completed in {duration} seconds.")
         app.log.debug(f"Extracted text: {extracted_text}")
 
         return {'filename': file_name, 'extractedText': extracted_text}
@@ -50,12 +54,15 @@ def extract_text():
 @app.route('/extract-paragraph', methods=['POST'], cors=True)
 def extract_paragraph():
     try:
+        start_time = time.time()
         request_data = json.loads(app.current_request.raw_body.decode('utf-8'))
         file_name = request_data['filename']
 
         extracted_text = textract_service.extract_paragraph(storage_service.get_storage_location(), file_name)
 
         app.log.debug("Text extraction completed.")
+        duration = time.time() - start_time  
+        app.log.debug(f"Paragraph extraction completed in {duration} seconds.")
         app.log.debug(f"Extracted text: {extracted_text}")
 
         return {'filename': file_name, 'extractedText': extracted_text}

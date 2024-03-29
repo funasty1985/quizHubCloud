@@ -7,7 +7,6 @@ class TextractService:
         self.client = boto3.client('textract')
 
     def extract_text(self, bucket_name, document_name):
-
         response = self.client.start_document_text_detection(
             DocumentLocation={
                 'S3Object': {
