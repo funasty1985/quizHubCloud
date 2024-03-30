@@ -41,7 +41,7 @@ def extract_text():
 
         app.log.debug("Text extraction completed.")
         duration = time.time() - start_time 
-        app.log.debug(f"Text extraction completed in {duration} seconds.")
+        app.log.debug(f"Text extraction completed in {duration:.2f} seconds.")
         app.log.debug(f"Extracted text: {extracted_text}")
 
         return {'filename': file_name, 'extractedText': extracted_text}
@@ -62,7 +62,7 @@ def extract_paragraph():
 
         app.log.debug("Text extraction completed.")
         duration = time.time() - start_time  
-        app.log.debug(f"Paragraph extraction completed in {duration} seconds.")
+        app.log.debug(f"Paragraph extraction completed in {duration:.2f} seconds.")
         app.log.debug(f"Extracted text: {extracted_text}")
 
         return {'filename': file_name, 'extractedText': extracted_text}

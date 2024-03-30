@@ -54,15 +54,17 @@ class TextractService:
         """
         file_extension = '.' + document_name.split('.')[-1].lower()
         if file_extension == '.pdf':
-            threshold = 0.02
+            threshold = 0.02 # 2% of the page height
         else:
-            threshold = 0.05
+            threshold = 0.05 # 5% of the page height
 
         paragraphs = []
         current_paragraph = ""
         last_top = None
+
+        """ previous line height + space between the previous line top and the current line top """
         for item in response.get('Blocks', []):
-            if item['BlockType'] == "LINE":
+            if item['BlockType'] == "LINE": 
                 current_top = item['Geometry']['BoundingBox']['Top']
                 if last_top is not None and (current_top - last_top) > threshold:
                     paragraphs.append(current_paragraph.strip())
