@@ -1,35 +1,9 @@
 import boto3
 import time
 
-
 class TextractService:
     def __init__(self):
         self.client = boto3.client('textract')
-
-    def extract_text(self, bucket_name, document_name):
-        response = self.client.start_document_text_detection(
-            DocumentLocation={
-                'S3Object': {
-                    'Bucket': bucket_name,
-                    'Name': document_name
-                }
-            }
-        )
-        job_id = response['JobId']
-        print(f"Started job with id: {job_id}")
-
-        status = ""
-        while status not in ["SUCCEEDED", "FAILED"]:
-            time.sleep(5)
-            response = self.client.get_document_text_detection(JobId=job_id)
-            status = response['JobStatus']
-
-        text = ""
-        if status == "SUCCEEDED":
-            for item in response['Blocks']:
-                if item['BlockType'] == "LINE":
-                    text += item['Text'] + "\n"
-        return text
 
     def extract_paragraph(self, bucket_name, document_name):
         response = self.client.start_document_text_detection(
@@ -49,31 +23,28 @@ class TextractService:
             response = self.client.get_document_text_detection(JobId=job_id)
             status = response['JobStatus']
 
-        """
-        different file types have different thresholds for paragraph detection
-        """
-        file_extension = '.' + document_name.split('.')[-1].lower()
-        if file_extension == '.pdf':
-            threshold = 0.02 # 2% of the page height
-        else:
-            threshold = 0.05 # 5% of the page height
+        if status == "FAILED":
+            raise Exception("Textract job failed")
 
-        paragraphs = []
-        current_paragraph = ""
-        last_top = None
+        text_by_page = {}
 
-        """ previous line height + space between the previous line top and the current line top """
-        for item in response.get('Blocks', []):
-            if item['BlockType'] == "LINE": 
-                current_top = item['Geometry']['BoundingBox']['Top']
-                if last_top is not None and (current_top - last_top) > threshold:
-                    paragraphs.append(current_paragraph.strip())
-                    current_paragraph = item['Text'] + " "
-                else:
-                    current_paragraph += item['Text'] + " "
-                last_top = current_top
+        next_token = None
+        while True:
+            kwargs = {'JobId': job_id}
+            if next_token:
+                kwargs['NextToken'] = next_token
+            response = self.client.get_document_text_detection(**kwargs)
 
-        if current_paragraph:
-            paragraphs.append(current_paragraph.strip())
+            for item in response.get('Blocks', []):
+                if item['BlockType'] == "LINE":
+                    page_number = item['Page']
+                    if page_number not in text_by_page:
+                        text_by_page[page_number] = []
+                    text_by_page[page_number].append(item['Text'])
 
-        return paragraphs
+            next_token = response.get('NextToken')
+            if not next_token:
+                break
+
+        pages_text = [{'Page': page, 'Text': " ".join(lines)} for page, lines in text_by_page.items()]
+        return pages_text

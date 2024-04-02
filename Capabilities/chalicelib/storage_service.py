@@ -1,6 +1,5 @@
 import boto3
 
-
 class StorageService:
     def __init__(self, storage_location):
         self.client = boto3.client('s3')
