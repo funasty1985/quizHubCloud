@@ -4,6 +4,7 @@ from typing import List, Tuple
 import itertools
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import os
 
 class Distractor:
 
@@ -11,8 +12,9 @@ class Distractor:
     DIS_NUM = 5
 
     def __init__(self):
+        parent_path = os.path.dirname(os.path.abspath(__file__))
         # loading pretrain model
-        self.s2v = Sense2Vec().from_disk('corpus/s2v_old')
+        self.s2v = Sense2Vec().from_disk(f'{parent_path}/corpus/s2v_old')
         self.senTransformer = SentenceTransformer('all-MiniLM-L12-v2')
 
     def gen_most_similar_words(self, original_word):
@@ -111,7 +113,9 @@ if __name__ == '__main__':
 
     distractor = Distractor()
 
-    word_list = ['nlp', 'support vector machine', 'svm', 'S3', 'storage management', 'Intelligent Tiering']
+    # word_list = ['nlp', 'support vector machine', 'svm', 'S3', 'storage management', 'Intelligent Tiering']
+
+    word_list = ['pipelines', 'workflow', 'automation', 'training', 'machine']
 
     issue_words = []
     for word in word_list:

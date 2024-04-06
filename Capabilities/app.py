@@ -1,4 +1,7 @@
-from chalice import Chalice
+import base64
+import json
+
+from chalice import Chalice, Response
 from chalicelib import comprehend_service
 from chalicelib.storage_service import StorageService
 from chalicelib.textract_service import TextractService
@@ -6,8 +9,12 @@ from chalicelib.textract_service import TextractService
 app = Chalice(app_name='Capabilities')
 
 comprehend_service = comprehend_service.ComprehendService()
-storage_service = StorageService('contentcen301236221.aws.ai')
-textract_service = TextractService()
+storage_service = StorageService('contentcen301323706.aws.ai')
+textract_service = TextractService(
+    role='arn:aws:iam::975049922009:role/TextractRole',
+    )
+
+
 
 @app.route('/', cors=True)
 def index():
@@ -49,7 +56,9 @@ def extract_text():
         file_name = request_data['filename']
 
         app.log.debug(f"Starting text extraction for {file_name}.")
-        extracted_text = textract_service.extract_text(storage_service.get_storage_location(), file_name)
+        paragraph_text_list = textract_service.extract_text(storage_service.get_storage_location(), file_name)
+
+        extracted_text = "\n\n\n".join(paragraph_text_list)
 
         app.log.debug("Text extraction completed.")
         app.log.debug(f"Extracted text: {extracted_text}")

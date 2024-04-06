@@ -9,6 +9,9 @@ chalice = "*"
 setuptools = "*"
 wheel = "*"
 spacy = "*"
+keybert = "*"
+sentencepiece = "*"
+protobuf = "*"
 
 [dev-packages]
 

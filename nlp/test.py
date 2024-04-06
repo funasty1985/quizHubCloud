@@ -1,42 +1,14 @@
-import re
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
-import spacy
+from utils import Distractor, KeyWordsExtractor, Summarizer
+import time
 import pprint
 
-
-class Summarizer():
-    SUMMARY_LENGTH = 50
-
-    def __init__(self):
-        self.summarizer = pipeline("summarization", model="Falconsai/text_summarization")
-        return
-
-    def gen_summaries_from_text(self, t):
-        paragraphs = self.split_paragraphs(t)
-        summaries = self.summarizer(paragraphs, max_length=200, min_length=50, do_sample=False)
-        results = [ele['summary_text'] for ele in summaries]
-        return results
-
-    def gen_summary_per_paragraph(self, text_list):
-        summaries = self.summarizer(text_list, max_length=200, min_length=50, do_sample=False)
-        results = [ele['summary_text'] for ele in summaries]
-        return results
-
-    def split_paragraphs(self, t):
-        # ref : https://stackoverflow.com/questions/38852712/python-split-on-empty-new-line
-        blank_line_regex = r"(?:\r?\n){2,}"
-        paragraphs = re.split(blank_line_regex, t.strip())
-        return paragraphs
-
-
-if __name__ == '__main__':
-
-    nlp = spacy.load("en_core_web_sm")
-
-    paras = [
-        '''
-What Is Privacy in AI To address these concerns, privacy in AI involves ensuring that personal data is collected and used in ways that respect individuals' rights to privacy and data protection. This can include techniques such as anonymization and pseudonymization to protect personal data, and the implementation of data protection regulations such as the GDPR (General Data Protection Regulation) in the EU or CCPA (California Consumer Privacy Act) in the US. Privacy in AI also involves ensuring that AI systems are transparent, explainable, and accountable. This means that individuals should be able to understand how their data is being used and have the ability to control its use. Additionally, AI systems should be designed in ways that minimize the risk of bias, discrimination, and other harmful impacts on individuals or groups. Privacy in AI is an essential aspect of developing and deploying ethical and responsible AI systems that respect individuals' rights to privacy and data protection. ''',
-        '''
+para_list = [
+    '''In this first chapter, we will introduce machine learning pipelines and outline all the
+steps that go into building them. We’ll explain what needs to happen to move your
+machine learning model from an experiment to a robust production system. We’ll
+also introduce our example project that we will use throughout the rest of the book to
+demonstrate the principles we describe.''',
+    '''
 Why Machine Learning Pipelines?
 The key benefit of machine learning pipelines lies in the automation of the model life
 cycle steps. When new training data becomes available, a workflow which includes
@@ -45,7 +17,7 @@ triggered. We have observed too many data science teams manually going through
 these steps, which is costly and also a source of errors. Let’s cover some details of the
 benefits of machine learning pipelines:
 ''',
-        '''
+    '''
 Ability to focus on new models, not maintaining existing models
 Automated machine learning pipelines will free up data scientists from maintain‐
 ing existing models. We have observed too many data scientists spending their
@@ -55,7 +27,7 @@ they manually tune their models. Automated pipelines allow data scientists to
 develop new models, the fun part of their job. Ultimately, this will lead to higher
 job satisfaction and retention in a competitive job market.
 ''',
-        '''
+    '''
 Prevention of bugs
 Automated pipelines can prevent bugs. As we will see in later chapters, newly
 created models will be tied to a set of versioned data and preprocessing steps will
@@ -68,7 +40,7 @@ ent processing instructions than what we trained the model with. These bugs
 might be really difficult to debug since an inference of the model is still possible,
 but simply incorrect. With automated workflows, these errors can be prevented.
 ''',
-        '''
+    '''
 Useful paper trail
 The experiment tracking and the model release management generate a paper
 trail of the model changes. The experiment will record changes to the model’s
@@ -77,7 +49,7 @@ accuracy). The model release management will keep track of which model was
 ultimately selected and deployed. This paper trail is especially valuable if the data
 science team needs to re-create a model or track the model’s performance.
 ''',
-        '''
+    '''
 Standardization
 Standardized machine learning pipelines improve the experience of a data sci‐
 ence team. Due to the standardized setups, data scientists can be onboarded
@@ -102,9 +74,21 @@ that will assist if questions arise around data protection laws, such as Europe�
 General Data Protection Regulation (GDPR).
 • Free up development time for data scientists and increase their job satisfaction.''']
 
-    summarizer = Summarizer()
-    # paras = summarizer.gen_summaries_from_text(text)
-    summaries = summarizer.gen_summary_per_paragraph(paras)
-    for p in summaries:
-        pprint.pprint(p)
-        print()
+if __name__ == '__main__':
+
+
+    # instantiation
+    distractor = Distractor.Distractor()
+    key_word_extractor = KeyWordsExtractor.KeyWordsExtractor()
+    summarizer = Summarizer.Summarizer()
+
+    # summarization
+    start_time = time.time()
+    context_list = summarizer.gen_summary_per_paragraph(para_list)
+    print("--- %s summarization time (seconds) ---" % (time.time() - start_time))
+
+    # key words extraction
+    start_time = time.time()
+    key_words_by_context = key_word_extractor.batch_extract_key_words(context_list)
+    pprint.pprint(key_words_by_context)
+    print("--- %s key words extraction time (seconds) ---" % (time.time() - start_time))
