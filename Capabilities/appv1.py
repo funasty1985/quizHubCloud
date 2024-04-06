@@ -4,7 +4,7 @@ import json
 from chalice import Chalice, Response
 from chalicelib import comprehend_service
 from chalicelib.storage_service import StorageService
-from chalicelib.textract_service import TextractService
+from chalicelib.textract_servicev1 import TextractService
 
 app = Chalice(app_name='Capabilities')
 
