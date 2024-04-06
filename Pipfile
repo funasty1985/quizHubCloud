@@ -9,6 +9,8 @@ chalice = "*"
 setuptools = "*"
 wheel = "*"
 spacy = "*"
+sense2vec = "*"
+sentence-transformers = "*"
 
 [dev-packages]
 
