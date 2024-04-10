@@ -1,21 +1,8 @@
+import random
 from Distractor import Distractor
 from QuestionGenerator import QuestionGenerator
 from Summarizer import Summarizer
-
-import sys
-import os
-
-# Get the current directory of Pipeline.py
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Traverse two directories up to get to project_directory
-project_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
-
-module_dir = os.path.join(project_dir, 'Capabilities/chalicelib')
-sys.path.append(module_dir)
-
-# from comprehend_service import ComprehendService ### module importing not working
-
+from KeyWordsExtractor import KeyWordsExtractor
 
 # Expected Output: 
 '''
@@ -31,7 +18,7 @@ class Pipeline():
     def __init__(self):
         self.qa_gen = QuestionGenerator()
         self.summmarizer = Summarizer()
-        self.keyword_gen = ComprehendService()
+        self.keyword_gen = KeyWordsExtractor()
         self.distractor = Distractor()
         
     
@@ -44,8 +31,7 @@ class Pipeline():
         '''
 
         contexts = []
-        for text in texts:
-            contexts.append(self.summmarizer.gen_summaries(text))
+        contexts = self.summmarizer.gen_summary_per_paragraph(texts)
         
         return contexts
 
@@ -57,8 +43,11 @@ class Pipeline():
         List containing strings.
         '''
         keyphrases_dict_list = []
-        for context in contexts:
-            keyphrases_dict_list.append(self.keyword_gen.extract_key_phrases(context))
+        for i,context in enumerate(contexts):
+            context_keyphrase_dict = {}
+            context_keyphrase_dict[context] = self.keyword_gen.extract_key_words(context)
+            context_keyphrase_dict['context_id'] = i
+            keyphrases_dict_list.append(context_keyphrase_dict)
         
         return keyphrases_dict_list
 
@@ -69,31 +58,78 @@ class Pipeline():
         Inputs:
         List containing strings.
         '''
-         answers_distractors = []
+         # Receives an list of disctionaries of format   [{'context': ['keyword1', 'keyword2', 'keyword3', 'keyword4'], 'context_id': 0}
+         #print('Keyphrases received:', keyphrases_dict_list)
+         entries = []
+         context = ''
+         answer  = ''
+         distractors = []
+         context_id = -1
+
+
          for item in keyphrases_dict_list:
-            context_id = item['context_id']
-            for keyphrase in item['keyPhrases']:
-                answer_distractor_dict = {}
-                try:
-                    answer_distractor_dict[keyphrase] = self.distractor.gen_distractors(keyphrase)
-                    answer_distractor_dict['context_id'] = context_id
-                    answers_distractors.append(answer_distractor_dict)
-                except Exception as e:
-                    answer_distractor_dict[keyphrase] = "Error"
-                    answer_distractor_dict['context_id'] = -1  
-                    answers_distractors.append(answer_distractor_dict)    
-         return answers_distractors
+             keys = item.keys()
+             context = list(keys)[0]
+             keyphrases = item[context]
+             context_id = item['context_id']
+             #print('keyphrases to distractors:', keyphrases)
+             for keyword in keyphrases:
+                 #print(keyword)
+                 answer = keyword
+                 try:
+                    distractors = self.distractor.gen_distractors(answer)
+                    entry = {'entry': {'context': context, 'answer': answer, 'distractors': distractors, 'context_id':context_id}}
+                    entries.append(entry)
+                 except Exception as e:
+                    print(f'Not possible to generate distractors for: {answer}. Skipping')                    
+         return entries
+             
 
-
-    def generate_questions(self,keyphrases_dict, context):
+    def generate_questions(self,keyphrases_dict):
         '''
-        Returns a dictionary containing a summary of each text.
+        Returns a list of dictionaries containing an entry with context, prompt, answer, disstractor, and context_id.
 
         Inputs:
-        List containing strings. 
+        Dictionary containing entries with context, answer, distractor, and context id.  
         '''
-        qa_dict = self.qa_gen.generate_questions(keyphrases_dict, context)
-        return qa_dict
+        updated_entries = []
+        for item in keyphrases_dict:
+            entry = item['entry']
+            answer = entry['answer']
+            context = entry['context']
+            try:
+                question = self.qa_gen.generate_question(answer, context)
+                entry['prompt'] = question
+                updated_entries.append({'entry':entry})
+            except:
+                print(f'Not able to generate question for context {context}'. Skipping)
+        return updated_entries
+    
+    def format_output(self, updated_entries):
+        '''
+        Returns a list of entries containing prompt, answers, and index of answer
+        
+        Inputs:
+        List of dictionaries containing entries with context, answer, distractors, promtps, and context id.
+        '''
+        formatted_entries = []
+        for item in updated_entries:
+            entry = item['entry']
+            answer = entry['answer']
+            distractors = entry['distractors']
+            prompt = entry['prompt']
+
+            print('Actual answer:', answer)
+            # Generate a random index to insert the answer into the distractor list
+            random_index = random.randint(0, len(distractors))
+
+            # Insert the answer into the list at the random index
+            distractors.insert(random_index, answer)
+
+            entry = {'prompt': prompt, 'answers': distractors, 'answer':random_index}
+            formatted_entries.append(entry)
+        
+        return formatted_entries
     
     def pipeline(self, texts):
         '''
@@ -105,22 +141,28 @@ class Pipeline():
         contexts = self.generate_context(texts) #creating the context (summarization of the texts)
         keyphrases = self.generate_keyphrases(contexts) #extracting keyphrases from each context \
         
-        #getting a list of dictionaries" {Keyphrases: abc, cde, efg, ...}
+        #print('Contexts:', contexts)
+        #print('Keyphrases:', keyphrases)
+
+        #getting a list of dictionaries" [{'context': ['keyword1', 'keyword2', 'keyword3', 'keyword4'], 'context_id': 0}
         #need to link it to each context to generate questions
         #generate questions only if distractors were able to be generated, else, skip generating the question. 
 
-        context_keyphrase_dict = {}
-        
-        for i in len(contexts):
-            keyphrase_context_id = {'keyphrases': keyphrases[i], 'context_id': i}
-            context_keyphrase_dict[contexts[i]] = keyphrase_context_id 
-        
+        #print(context_keyphrase_dict)
+
         #context and keywords are mapped. Now generate distractors
         keyphrase_distractor_dict_list = self.generate_distractors(keyphrases)
+        #returns a list of dictionaries of format [{'entry': 'context': context, 'answer': answer, 'distractors': ['distractor1', 'distractor2'], 'context_id: 0}]
 
+        entry_list = self.generate_questions(keyphrase_distractor_dict_list)
+
+        updated_entry_list = self.format_output(entry_list)
+        
+        return updated_entry_list
+        #print(keyphrase_distractor_dict_list)
         #all keyphrases have their distractors,they are not linked to their context 
         # {'blablabla' : keyphrases: { 1, 2, 3}, id : 0}
-        return keyphrase_distractor_dict_list
+        #return keyphrase_distractor_dict_list
 
         
 

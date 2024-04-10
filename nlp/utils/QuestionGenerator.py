@@ -1,5 +1,6 @@
 from transformers import pipeline
 from transformers import T5ForConditionalGeneration, T5Tokenizer
+import re
 
 
 class QuestionGenerator():
@@ -24,7 +25,8 @@ class QuestionGenerator():
         '''
         formatted_input = self.format_input(answer, context)
         results = self.pipe(formatted_input)
-        question = results[0]['generated_text'][:-2]
+        question = re.sub(r'\?\s*', '', results[0]['generated_text'])
+        question = question + '?'
 
         return question
     

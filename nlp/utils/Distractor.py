@@ -96,7 +96,7 @@ class Distractor:
         return
 
     def gen_distractors(self, word):
-        distractors = distractor.gen_most_similar_words(word)
+        distractors = self.gen_most_similar_words(word)
         # adding the original word at the beginning of the distractors
         distractors.insert(0, word)
 

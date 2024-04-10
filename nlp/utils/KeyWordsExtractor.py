@@ -9,7 +9,7 @@ class KeyWordsExtractor:
 
         keyword_list = self.kw_model.extract_keywords(text, keyphrase_ngram_range=keyphrase_ngram_range, stop_words=stop_words)
 
-        print(keyword_list)
+        #print(keyword_list)
         return [ele[0] for ele in keyword_list ]
 
     def batch_extract_key_words(self, test_list):
