@@ -1,8 +1,8 @@
 import random
-from Distractor import Distractor
-from QuestionGenerator import QuestionGenerator
-from Summarizer import Summarizer
-from KeyWordsExtractor import KeyWordsExtractor
+from .Distractor import Distractor
+from .QuestionGenerator_v2 import QuestionGenerator
+from .Summarizer import Summarizer
+from .KeyWordsExtractor import KeyWordsExtractor
 
 # Expected Output: 
 '''
@@ -13,7 +13,7 @@ answer: indexOfAnswer, e.g. 0
 }
 '''
 
-class Pipeline():
+class GenQuestionPipeline():
 
     def __init__(self):
         self.qa_gen = QuestionGenerator()
@@ -126,7 +126,7 @@ class Pipeline():
             # Insert the answer into the list at the random index
             distractors.insert(random_index, answer)
 
-            entry = {'prompt': prompt, 'answers': distractors, 'answer':random_index}
+            entry = {'prompt': prompt, 'options': distractors, 'answer':random_index}
             formatted_entries.append(entry)
         
         return formatted_entries
@@ -168,8 +168,7 @@ class Pipeline():
 
 if __name__ == '__main__':
     
-   
-    pipe = Pipeline()
+    pipe = GenQuestionPipeline()
     
     texts = ["The cell is the basic structural and functional unit of all forms of life. Every cell consists of cytoplasm enclosed within a membrane; many cells contain organelles, each with a specific function. The term comes from the Latin word cellula meaning 'small room'. Most cells are only visible under a microscope. Cells emerged on Earth about 4 billion years ago. All cells are capable of replication, protein synthesis, and motility.",
              "Cells are broadly categorized into two types: eukaryotic cells, which possess a nucleus, and prokaryotic cells, which lack a nucleus but have a nucleoid region. Prokaryotes are single-celled organisms such as bacteria, whereas eukaryotes can be either single-celled, such as amoebae, or multicellular, such as some algae, plants, animals, and fungi. Eukaryotic cells contain organelles including mitochondria, which provide energy for cell functions; chloroplasts, which create sugars by photosynthesis, in plants; and ribosomes, which synthesise proteins.",

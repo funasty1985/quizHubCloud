@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from pymongo import MongoClient
 import random
 from bson.objectid import ObjectId
-import dill as pickle
 app = Flask(__name__)
 
 def generate_quiz_prompt(quiz_id):

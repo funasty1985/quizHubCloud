@@ -17,12 +17,14 @@ class QuestionGenerator():
         Formats the answer and context with the expected tags for loaded model. Answer and Context are of type string
         '''
         model_input = '<answer> ' + answer + ' <context> ' + context
+        print(model_input)
         return model_input
 
     def generate_question(self, answer, context):
         '''
         Invokes the pipeline to generate the question and return the question as a string
         '''
+        print("generate question")
         formatted_input = self.format_input(answer, context)
         results = self.pipe(formatted_input)
         question = re.sub(r'\?\s*', '', results[0]['generated_text'])

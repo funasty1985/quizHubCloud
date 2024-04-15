@@ -14,6 +14,8 @@ sentence-transformers = "*"
 keybert = "*"
 sentencepiece = "*"
 protobuf = "*"
+flask = "*"
+pymongo = "*"
 
 [dev-packages]
 

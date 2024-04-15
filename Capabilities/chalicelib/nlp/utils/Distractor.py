@@ -9,7 +9,7 @@ import os
 class Distractor:
 
     SIM_WORD_NUM = 20
-    DIS_NUM = 5
+    DIS_NUM = 3
 
     def __init__(self):
         parent_path = os.path.dirname(os.path.abspath(__file__))
