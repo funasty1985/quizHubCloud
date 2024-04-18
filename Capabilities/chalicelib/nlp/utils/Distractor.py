@@ -5,6 +5,8 @@ import itertools
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import os
+import boto3
+import tempfile
 
 class Distractor:
 
@@ -12,10 +14,36 @@ class Distractor:
     DIS_NUM = 3
 
     def __init__(self):
-        parent_path = os.path.dirname(os.path.abspath(__file__))
-        # loading pretrain model
-        self.s2v = Sense2Vec().from_disk(f'{parent_path}/corpus/s2v_old')
+        self.s3_client = boto3.client('s3')
+        self.bucket_name = 'quizhubcloud'
+        self.model_key = 'corpus/s2v_old'  # Adjust the path as necessary
+
+        # Use /tmp directory in AWS Lambda for storing the model temporarily
+        local_model_path = '/tmp/s2v_old'
+
+        # Ensure the directory exists and is empty
+        if not os.path.exists(local_model_path):
+            os.makedirs(local_model_path, exist_ok=True)
+        else:
+            # Optionally clear the directory if needed
+            for file in os.listdir(local_model_path):
+                os.remove(os.path.join(local_model_path, file))
+
+        # Download model from S3 to the temporary directory
+        self.download_model_from_s3(self.bucket_name, self.model_key, local_model_path)
+
+        # Loading pretrained model
+        self.s2v = Sense2Vec().from_disk(local_model_path)
         self.senTransformer = SentenceTransformer('all-MiniLM-L12-v2')
+
+    def download_model_from_s3(self, bucket, key, local_path):
+        """ Download a model directory from S3 to a local path """
+        paginator = self.s3_client.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=bucket, Prefix=key):
+            for obj in page['Contents']:
+                target_path = os.path.join(local_path, obj['Key'].split('/')[-1])
+                self.s3_client.download_file(bucket, obj['Key'], target_path)
+
 
     def gen_most_similar_words(self, original_word):
         word = original_word.lower()
