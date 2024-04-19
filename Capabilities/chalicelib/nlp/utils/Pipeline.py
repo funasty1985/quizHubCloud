@@ -1,8 +1,8 @@
 import random
-from .Distractor import Distractor
-from .QuestionGenerator_v2 import QuestionGenerator
-from .Summarizer import Summarizer
-from .KeyWordsExtractor import KeyWordsExtractor
+from Distractor import Distractor
+from QuestionGenerator_v2 import QuestionGenerator
+from Summarizer import Summarizer
+from KeyWordsExtractor import KeyWordsExtractor
 
 # Expected Output: 
 '''
@@ -20,6 +20,13 @@ class GenQuestionPipeline():
         self.summmarizer = Summarizer()
         self.keyword_gen = KeyWordsExtractor()
         self.distractor = Distractor()
+        self.english_words = [
+            "apple", "banana", "carrot", "dog", "elephant", "fish", "gorilla", "house", "igloo", "jacket",
+            "kangaroo", "lemon", "monkey", "napkin", "orange", "penguin", "queen", "rabbit", "snake", "tiger",
+            "umbrella", "violet", "whale", "xylophone", "yacht", "zebra", "ant", "bear", "cat", "duck",
+            "egg", "frog", "goat", "hat", "ice", "jellyfish", "kite", "lion", "mango", "nut", "owl",
+            "pear", "quilt", "rose", "sun", "tree", "unicorn", "violin", "wasp", "xylograph", "yak"
+        ]
         
     
     def generate_context(self, texts):
@@ -123,6 +130,12 @@ class GenQuestionPipeline():
             # Generate a random index to insert the answer into the distractor list
             random_index = random.randint(0, len(distractors))
 
+            #Checking for duplicates in the distractor list
+            for i in range(len(distractors)):
+                if distractors[i] == answer:
+                    print('duplicate answer, inserting another distractor')
+                    distractors[i] = random.choice(self.english_words)
+            
             # Insert the answer into the list at the random index
             distractors.insert(random_index, answer)
 
