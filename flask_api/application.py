@@ -1,60 +1,90 @@
+import sys
 from flask import Flask, request, jsonify
-from pymongo import MongoClient
-import random
+import json
+import base64
+from chalicelib.storage_service import StorageService
+from chalicelib.textract_service import TextractService
+from chalicelib.db_service import DbService
+import time
+from chalicelib.nlp.utils.Pipeline import GenQuestionPipeline
+from datetime import datetime
 from bson.objectid import ObjectId
+from flask_cors import CORS, cross_origin
+
+storage_service = StorageService('quizber')
+textract_service = TextractService()
+db_service = DbService("mongodb+srv://portfolioApp:Fu2017fu@cluster0.ykgbhqe.mongodb.net/project1?retryWrites=true&w=majority")
+nlp_service = GenQuestionPipeline()
+
+app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 app = Flask(__name__)
 
-def generate_quiz_prompt(quiz_id):
-    prompts = ["What is 2+2?", "What is the capital of France?", "What color is the sky on a clear day?"]
-    options = [
-        ["1", "2", "3", "4"],
-        ["Paris", "London", "Berlin", "Madrid"],
-        ["Blue", "Green", "Red", "Yellow"]
-    ]
-    answers = [3, 0, 0] 
+@app.route('/upload', methods=['POST'])
+@cross_origin()
+def upload_pdf():
+    try:
+        request_data = json.loads(request.data)
+        file_name = request_data['filename']
+        file_bytes = base64.b64decode(request_data['filebytes'])
 
-    index = random.randint(0, len(prompts)-1)
-    return {
-        "quizId": ObjectId(quiz_id),
-        "prompt": prompts[index],
-        "options": options[index],
-        "answer": answers[index],
-    }
+        app.logger.debug(f"Attempting to upload {file_name} to S3.")
+        file_info = storage_service.upload_file(file_bytes, file_name)
+        app.logger.debug(f"Upload successful: {file_info}")
 
+        return jsonify(file_info)
+    except Exception as e:
+        app.logger.error(f"Error processing or uploading file: {str(e)}")
+        return jsonify({'message': f'Error processing or uploading file: {str(e)}'}), 500
 
-client = MongoClient('mongodb+srv://portfolioApp:Fu2017fu@cluster0.ykgbhqe.mongodb.net/project1?retryWrites=true&w=majority')
-db = client.project1
-quizzes = db.Quiz
-questions = db.Question
+@app.route('/extract-paragraph', methods=['POST'])
+@cross_origin()
+def extract_paragraph():
+    try:
+        start_time_1 = time.time()
+        request_data = json.loads(request.data.decode('utf-8'))
+        file_name = request_data['filename']
 
+        # extract text
+        app.logger.debug("Text extraction started.")
+        extracted_text = textract_service.extract_paragraph(storage_service.get_storage_location(), file_name)
+        text_by_page = [o['Text'] for o in extracted_text]
+        app.logger.debug("Text extraction completed.")
+        duration = time.time() - start_time_1
+        app.logger.debug(f"Paragraph extraction completed in {duration:.2f} seconds.")
 
-# POST to http://127.0.0.1:5000/generate_quiz
-# SAMPLE BODY REQUEST
-# {
-#     "title": "Admin Second Quiz",
-#     "description": "admin test2",
-#     "author": "admin"
-# }
-@app.route('/generate_quiz', methods=['POST'])
-def generate_quiz():
+        # generate question
+        app.logger.debug("Generate Questions started.")
+        start_time = time.time()
+        questions = nlp_service.pipeline(text_by_page)
+        app.logger.debug("Generate Questions completed.")
+        duration = time.time() - start_time
+        app.logger.debug(f"Generate Questions completed in {duration:.2f} seconds.")
 
+        # persist question
+        app.logger.debug("Upload Questions Started")
+        start_time = time.time()
+        date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+        # create quiz in db
+        quiz_id = db_service.create_quiz(
+            user=db_service.user,
+            title=f"quiz created at {date_time}",
+            description="This is a wonderful test"
+        )
+        # persist questions
+        db_service.upload_questions_by_quiz_id(questions, quiz_id)
+        duration = time.time() - start_time
+        app.logger.debug(f"Upload Questions ended in {duration:.2f} seconds.")
 
-    quiz_metadata = request.json
-    quiz_result = quizzes.insert_one(quiz_metadata)
-    quiz_id = quiz_result.inserted_id
+        duration = time.time() - start_time_1
+        app.logger.debug(f"TOTAL PROCESS TAKES {duration:.2f} seconds.")
+        return jsonify({'filename': file_name, 'questions': questions})
 
-
-    quiz_data = generate_quiz_prompt(quiz_id)
-    quiz_data["quizId"] = ObjectId(quiz_id)
-
-    question_result = questions.insert_one(quiz_data)
-    
-    return jsonify({"success": True, "quiz_id": str(quiz_id), "question_id": str(question_result.inserted_id)})
-
-
-@app.route('/')
-def hello():
-    return 'Hello!'
+    except Exception as e:
+        app.logger.error(f"Error extracting text from the file: {str(e)}")
+        return jsonify({'message': f'Error extracting text from the file: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
+
